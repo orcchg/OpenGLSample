@@ -5,12 +5,14 @@
 #include "render.h"
 
 Render::Render() {
+  m_texture_filename = new char[256];
 }
 
 Render::~Render() {
   free(glenv.m_bg_vertex_buffer);
   free(glenv.m_rectangle_texCoord_buffer);
   glDeleteProgram(glenv.m_program);
+  delete [] m_texture_filename;  m_texture_filename = nullptr;
 }
 
 void Render::setSurface(ANativeWindow* window) {
@@ -21,7 +23,8 @@ void Render::setSurface(ANativeWindow* window) {
 
 void Render::draw() {
   if (m_egl_display != EGL_NO_DISPLAY) {
-    drawTriangle();
+//    drawTriangle();
+    drawTexturedTriangle();
   }
   eglSwapBuffers(m_egl_display, m_egl_surface);
 }
@@ -51,10 +54,40 @@ void Render::drawTriangle() {
   glDisableVertexAttribArray(a_color);
 }
 
+void Render::drawTexturedTriangle() {
+  glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glViewport(-4, -4, m_width + 4, m_height + 4);
+  glUseProgram(glenv.m_program);
+
+  GLint a_position = glGetAttribLocation(glenv.m_program, "a_position");
+  GLint a_texCoord = glGetAttribLocation(glenv.m_program, "a_texCoord");
+
+  glVertexAttribPointer(a_position, 4, GL_FLOAT, GL_FALSE, 0, &glenv.m_tri_vertex_buffer[0]);
+  glVertexAttribPointer(a_texCoord, 2, GL_FLOAT, GL_FALSE, 0, &glenv.m_rectangle_texCoord_buffer[0]);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, glenv.m_texture_id);
+  GLint sampler = glGetUniformLocation(glenv.m_program, "s_texture");
+  glUniform1i(sampler, 0);
+
+  glEnableVertexAttribArray(a_position);
+  glEnableVertexAttribArray(a_texCoord);
+
+  glEnable(GL_TEXTURE_2D);
+//  glEnable(GL_BLEND);
+//  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+
+  glDisableVertexAttribArray(a_position);
+  glDisableVertexAttribArray(a_texCoord);
+}
+
 void Render::init() {
   struct Shader shader;
-  prepareColorShaderSource(&shader);
-//  prepareTextureShaderSource(&shader);
+//  prepareColorShaderSource(&shader);
+  prepareTextureShaderSource(&shader);
   glenv.m_program = prepareProgram(&shader);
 
   /* Prepare rendering ROI and texture buffer */
@@ -142,15 +175,15 @@ void Render::init() {
 
   /* Prepare texture */
   // --------------------------------------------
-//  const uint8_t* image_buffer = loadImage(&glenv);
-//  glGenTextures(1, &glenv.m_texture_id);
-//  glBindTexture(GL_TEXTURE_2D, glenv.m_texture_id);
-//  glTexImage2D(GL_TEXTURE_2D, 0, glenv.m_format, glenv.m_width, glenv.m_height, 0, glenv.m_format, glenv.m_type, image_buffer);
-//  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//  glBindTexture(GL_TEXTURE_2D, 0);
+  const uint8_t* image_buffer = loadImage(&glenv);
+  glGenTextures(1, &glenv.m_texture_id);
+  glBindTexture(GL_TEXTURE_2D, glenv.m_texture_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, glenv.m_format, glenv.m_width, glenv.m_height, 0, glenv.m_format, glenv.m_type, image_buffer);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 bool Render::initConfig() {
@@ -367,7 +400,7 @@ const uint8_t* Render::loadImage(struct GLESEnv* glenv) {
   bool transparency = false;
   int error_code = 0;
 
-  const char* m_filename = "/opt/usr/apps/com.samsung.darling/res_output/tex/owl_color.png";  // XXX: hardcoded image PNG
+  const char* m_filename = m_texture_filename;
   size_t header_size = sizeof(header);
   file_descriptor = fopen(m_filename, "rb");
   if (file_descriptor == NULL) {
@@ -455,7 +488,7 @@ const uint8_t* Render::loadImage(struct GLESEnv* glenv) {
 
   ERROR_PNG:
     //NSLog(@"Error while reading PNG file: %s, code %i", m_filename, error_code);
-    fclose(file_descriptor);
+    if (file_descriptor != NULL) { fclose(file_descriptor); }
     free(image_buffer);  image_buffer = NULL;
     free(row_ptrs);  row_ptrs = NULL;
     if (png_ptr != NULL) {

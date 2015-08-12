@@ -16,6 +16,7 @@ public class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     ni = new NativeInterface();
+    ni.prepareAssets(getAssets(), getFilesDir().getAbsolutePath());
     RenderSurface surface = (RenderSurface) findViewById(R.id.surface_view);
     surface.setNativeInterface(ni);
   }

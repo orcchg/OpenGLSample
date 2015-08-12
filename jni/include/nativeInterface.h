@@ -17,6 +17,14 @@ JNIEXPORT jlong JNICALL Java_com_orcchg_openglsample_NativeInterface_init
 
 /*
  * Class:     com_orcchg_openglsample_NativeInterface
+ * Method:    prepareAssets
+ * Signature: (JLandroid/content/res/AssetManager;Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_com_orcchg_openglsample_NativeInterface_prepareAssets
+  (JNIEnv *, jobject, jlong, jobject, jstring);
+
+/*
+ * Class:     com_orcchg_openglsample_NativeInterface
  * Method:    setSurface
  * Signature: (JLandroid/view/Surface;)V
  */

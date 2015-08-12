@@ -40,6 +40,7 @@ public:
   virtual ~Render();
 
   void setSurface(ANativeWindow* window);
+  inline void setTextureFilename(const char* filename) { strcpy(m_texture_filename, filename); }
   void draw();
 
 private:
@@ -60,8 +61,10 @@ private:
   /** @} */  // end of WindowSurface group
 
   GLESEnv glenv;
+  char* m_texture_filename;
 
   void drawTriangle();
+  void drawTexturedTriangle();
 
   void init();
   bool initConfig();
